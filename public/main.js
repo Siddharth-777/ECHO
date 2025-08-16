@@ -1,15 +1,9 @@
-// client/public/main.js
-// ECHO client logic (WebRTC mesh + signaling + polished UI + chat toggle + active-speaker highlight)
-
-// ----- Config -----
 const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' }
-  // Add TURN entry if you deploy a TURN server
 ];
 
-// ----- State -----
 let ws = null;
 let roomId = null;
 let name = null;
@@ -18,14 +12,12 @@ let clientId = null;
 let localStream = null;
 let screenStream = null;
 
-// WebRTC maps
-const pcs = new Map();        // peerId -> RTCPeerConnection
-const remoteStreams = new Map(); // peerId -> MediaStream
+const pcs = new Map();  
+const remoteStreams = new Map(); 
 
-// Audio analyzers for active-speaker detection
-const analyzers = new Map(); // peerId -> { audioContext, source, analyser, interval }
 
-// ----- UI refs -----
+const analyzers = new Map(); 
+
 const els = {
   roomId: document.getElementById('roomId'),
   name: document.getElementById('name'),
@@ -46,11 +38,9 @@ const els = {
   chatPanel: document.getElementById('chatPanel')
 };
 
-// prefill if path /r/:roomId
 const m = location.pathname.match(/^\/r\/([^/]+)$/);
 if (m) els.roomId.value = decodeURIComponent(m[1]);
 
-// ----- events -----
 els.joinBtn.onclick = joinRoom;
 els.leaveBtn.onclick = leaveRoom;
 els.chatForm.addEventListener('submit', (e) => { e.preventDefault(); sendChat(); });
@@ -61,11 +51,9 @@ els.leaveFab.onclick = () => leaveRoom();
 els.copyInviteBtn.onclick = copyInvite;
 els.toggleChatBtn.onclick = toggleChatPanel;
 
-// ----- helpers -----
 function setStatus(t) { els.status.textContent = t; }
 function setParticipantCount(n) { els.countTag.textContent = `${n} participants`; }
 
-// Chat append
 function appendChat(nameText, text, ts) {
   const wrap = document.createElement('div');
   wrap.style.margin = '6px 0';
@@ -87,7 +75,6 @@ function appendChat(nameText, text, ts) {
   els.chatLog.scrollTop = els.chatLog.scrollHeight;
 }
 
-// Invite copy: /r/roomId link
 function copyInvite() {
   if (!roomId) {
     alert('Join a room first to copy invite link.');
@@ -103,7 +90,6 @@ function copyInvite() {
   });
 }
 
-// Chat panel toggle
 let chatVisible = true;
 function toggleChatPanel() {
   chatVisible = !chatVisible;
@@ -116,7 +102,6 @@ function toggleChatPanel() {
   }
 }
 
-// ----- media -----
 async function getLocalMedia() {
   if (localStream) return localStream;
   try {
@@ -128,7 +113,7 @@ async function getLocalMedia() {
     const v = document.getElementById('video-local');
     if (v) v.srcObject = localStream;
     updateControlButtons();
-    startLocalAnalyzer(); // detect local active speaker
+    startLocalAnalyzer(); 
   } catch (e) {
     alert('Camera/Microphone permission required.');
     throw e;
@@ -143,30 +128,25 @@ function updateControlButtons() {
   els.camBtn.textContent = camOn ? 'Camera: On' : 'Camera: Off';
 }
 
-// mic toggle
 function toggleMic() {
   if (!localStream) return;
   localStream.getAudioTracks().forEach(t => t.enabled = !t.enabled);
   updateControlButtons();
 }
 
-// cam toggle
 function toggleCam() {
   if (!localStream) return;
   localStream.getVideoTracks().forEach(t => t.enabled = !t.enabled);
   updateControlButtons();
 }
 
-// screen share toggle
 async function toggleScreen() {
   if (!screenStream) {
     try {
       screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      // add screen tracks to all peers
       for (const pc of pcs.values()) {
         screenStream.getTracks().forEach(track => pc.addTrack(track, screenStream));
       }
-      // when user stops share
       const sTrack = screenStream.getVideoTracks()[0];
       sTrack.onended = () => stopScreen();
       els.screenBtn.textContent = 'Stop screen';
@@ -193,7 +173,6 @@ function stopScreen() {
   els.screenBtn.textContent = 'Screen';
 }
 
-// ----- video tile helpers -----
 function ensureTile(peerId, displayName, isLocal = false) {
   let tile = document.getElementById(`tile-${peerId}`);
   if (!tile) {
@@ -229,9 +208,7 @@ function removeTile(peerId) {
   updateParticipantCount();
 }
 
-// ----- active-speaker detection (WebAudio) -----
 function startAnalyserForStream(peerId, stream) {
-  // avoid duplicate
   if (analyzers.has(peerId)) return;
   try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -244,11 +221,9 @@ function startAnalyserForStream(peerId, stream) {
     let lastSpeak = 0;
     const interval = setInterval(() => {
       analyser.getFloatTimeDomainData(data);
-      // compute RMS
       let sum = 0;
       for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
       const rms = Math.sqrt(sum / data.length);
-      // threshold tuned empirically
       const speaking = rms > 0.02;
       const tile = document.getElementById(`tile-${peerId}`);
       if (tile) {
@@ -256,7 +231,6 @@ function startAnalyserForStream(peerId, stream) {
           tile.classList.add('speaking');
           lastSpeak = Date.now();
         } else {
-          // keep highlight a short time to avoid flicker
           if (Date.now() - lastSpeak > 400) tile.classList.remove('speaking');
         }
       }
@@ -264,7 +238,6 @@ function startAnalyserForStream(peerId, stream) {
 
     analyzers.set(peerId, { audioContext, source, analyser, interval });
   } catch (e) {
-    // some browsers restrict AudioContext creation; ignore if fails
     console.warn('Analyser failed for', peerId, e);
   }
 }
@@ -277,18 +250,15 @@ function stopAnalyser(peerId) {
   analyzers.delete(peerId);
 }
 
-// local analyzer
 function startLocalAnalyzer() {
   if (!localStream) return;
   startAnalyserForStream('local', localStream);
 }
 
-// ----- WebRTC helpers -----
 function makePeerConnection(peerId, peerName) {
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   pcs.set(peerId, pc);
 
-  // add local tracks
   if (localStream) {
     localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
   }
@@ -296,11 +266,9 @@ function makePeerConnection(peerId, peerName) {
     screenStream.getTracks().forEach(track => pc.addTrack(track, screenStream));
   }
 
-  // remote stream collect
   const remote = new MediaStream();
   remoteStreams.set(peerId, remote);
   pc.ontrack = (ev) => {
-    // Some browsers provide ev.streams
     if (ev.streams && ev.streams[0]) {
       ev.streams[0].getTracks().forEach(t => {
         if (!remote.getTracks().find(x => x.id === t.id)) remote.addTrack(t);
@@ -312,10 +280,8 @@ function makePeerConnection(peerId, peerName) {
     const v = document.getElementById(`video-${peerId}`);
     if (v) v.srcObject = remote;
 
-    // start analyser on audio tracks (for active speaker)
     const audioTracks = remote.getAudioTracks();
     if (audioTracks.length > 0) {
-      // create a short-lived MediaStream for analyser
       const audioOnlyStream = new MediaStream(audioTracks);
       startAnalyserForStream(peerId, audioOnlyStream);
     }
@@ -388,7 +354,6 @@ function removePeer(peerId) {
   updateParticipantCount();
 }
 
-// ----- signaling (WebSocket) -----
 async function joinRoom() {
   roomId = els.roomId.value.trim();
   name = els.name.value.trim() || 'Guest';
@@ -416,7 +381,6 @@ async function joinRoom() {
         clientId = msg.clientId;
         setStatus(`In room ${msg.roomId} as ${msg.name}`);
         ensureTile('local', `${name} (you)`, true);
-        // Create initiator connections to existing peers
         (msg.peers || []).forEach(p => startPeerConnection(p.id, true, p.name || 'Participant'));
         updateParticipantCount();
         break;
@@ -442,7 +406,6 @@ async function joinRoom() {
         break;
 
       case 'chat':
-        // server excludes sender - only others reach here
         appendChat(msg.from.name || 'Participant', msg.text, msg.ts);
         break;
 
@@ -481,7 +444,6 @@ function cleanupAll() {
     localStream.getTracks().forEach(t => t.stop());
     localStream = null;
   }
-  // remove tiles
   const tiles = Array.from(document.querySelectorAll('.tile'));
   tiles.forEach(t => t.remove());
   setParticipantCount(0);
@@ -498,15 +460,11 @@ function sendChat() {
   els.chatInput.value = '';
 }
 
-// ----- participant count UI -----
 function updateParticipantCount() {
   const total = document.querySelectorAll('.tile').length;
   setParticipantCount(total);
 }
 
-// ----- window unload -----
 window.addEventListener('beforeunload', () => {
   try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'leave' })); } catch {}
 });
-
-// ----- end -----
