@@ -1,0 +1,131 @@
+/* General */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #202124;
+  color: white;
+  height: 100vh;
+}
+
+/* Landing Page */
+.landing {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.landing-container {
+  text-align: center;
+}
+.landing-container h1 {
+  font-size: 3rem;
+}
+.landing-container form {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.landing-container input, .landing-container button {
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 4px;
+  border: none;
+}
+.landing-container button {
+  background: #1a73e8;
+  color: white;
+  cursor: pointer;
+}
+
+/* Meeting */
+.meeting {
+  display: flex;
+  height: 100vh;
+}
+.video-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 5px;
+  background: black;
+  padding: 10px;
+}
+.video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  background: black;
+}
+
+.video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;   /* 🔑 makes video fill box */
+  border-radius: 8px;
+  border: 3px solid transparent;
+  display: block;
+}
+
+.video-container .name-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(0,0,0,0.5);
+  padding: 4px 8px;
+  border-radius: 0 0 8px 8px;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+
+
+/* Controls */
+.controls {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 30px;
+}
+.controls .center-controls {
+  display: flex;
+  gap: 10px;
+}
+.controls button {
+  background: #3c4043;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Chat Panel */
+.chat-panel {
+  width: 300px;
+  background: #2d2e30;
+  display: none;
+  flex-direction: column;
+}
+.chat-panel.active {
+  display: flex;
+}
+#chatBox {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+#chatInput {
+  padding: 10px;
+  border: none;
+  outline: none;
+}
+
+/* Active Speaker */
+.video-container.active video {
+  border-color: #1a73e8;
+}

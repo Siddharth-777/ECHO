@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ECHO – Join</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="landing">
+  <div class="landing-container">
+    <h1>ECHO</h1>
+    <p>Easy Conferencing & Hosting Online</p>
+    <form id="joinForm">
+      <input id="name" placeholder="Your name" required />
+      <input id="roomId" placeholder="Room ID" required />
+      <button type="submit">Join Meeting</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('joinForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const roomId = document.getElementById('roomId').value.trim();
+      if (!name || !roomId) return;
+      localStorage.setItem('echoName', name);
+      localStorage.setItem('echoRoom', roomId);
+      location.href = 'meeting.html';
+    });
+  </script>
+</body>
+</html>
